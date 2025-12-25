@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+
+# Environment variables
+.env
+
+# Logs
+logs/
+
+# Optional: local datasets if large
+data/raw/
+data/staging/
+data/processed/
+data/analytics/

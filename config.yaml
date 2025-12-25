@@ -1,0 +1,11 @@
+project:
+  name: ecommerce-analytics-pipeline
+
+database:
+  schema: warehouse
+
+analytics:
+  output_path: data/processed/analytics/
+  summary_file: analytics_summary.json
+
+retention_days: 7
