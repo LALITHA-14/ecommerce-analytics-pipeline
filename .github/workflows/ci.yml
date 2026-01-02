@@ -15,7 +15,7 @@ jobs:
         env:
           POSTGRES_DB: ecommerce_db_test
           POSTGRES_USER: test_user
-          POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          POSTGRES_PASSWORD: test_password
         ports:
           - 5432:5432
         options: >-
@@ -25,16 +25,15 @@ jobs:
           --health-retries 5
 
     steps:
-      # 1️⃣ Checkout code
+      # 1️⃣ Checkout repo
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ Setup Python
+      # 2️⃣ Python setup
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.9"
-          cache: "pip"
 
       # 3️⃣ Install dependencies
       - name: Install dependencies
@@ -48,19 +47,19 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y postgresql-client
 
-      # 5️⃣ Export DB environment variables (THIS FIXES YOUR ERROR)
-      - name: Set database environment variables
+      # 5️⃣ Environment variables (MATCH YOUR SCRIPTS)
+      - name: Set DB environment variables
         run: |
           echo "DB_HOST=localhost" >> $GITHUB_ENV
           echo "DB_PORT=5432" >> $GITHUB_ENV
           echo "DB_NAME=ecommerce_db_test" >> $GITHUB_ENV
           echo "DB_USER=test_user" >> $GITHUB_ENV
-          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> $GITHUB_ENV
+          echo "DB_PASSWORD=test_password" >> $GITHUB_ENV
 
-      # 6️⃣ Wait for PostgreSQL to be ready
+      # 6️⃣ Wait for PostgreSQL
       - name: Wait for PostgreSQL
         env:
-          PGPASSWORD: ${{ secrets.DB_PASSWORD }}
+          PGPASSWORD: test_password
         run: |
           for i in {1..30}; do
             pg_isready -h localhost -U test_user -d ecommerce_db_test && break
@@ -68,21 +67,24 @@ jobs:
             sleep 5
           done
 
-      # 7️⃣ Create schemas
-      - name: Create database schemas
+      # 7️⃣ Run DDL (YOUR sql/ddl)
+      - name: Create schemas and tables
         env:
-          PGPASSWORD: ${{ secrets.DB_PASSWORD }}
+          PGPASSWORD: test_password
         run: |
-          psql -h localhost -U test_user -d ecommerce_db_test -f sql/ddl/create_staging_schema.sql
-          psql -h localhost -U test_user -d ecommerce_db_test -f sql/ddl/create_production_schema.sql
-          psql -h localhost -U test_user -d ecommerce_db_test -f sql/ddl/create_warehouse_schema.sql
+          for file in sql/ddl/*.sql; do
+            echo "Running $file"
+            psql -h localhost -U test_user -d ecommerce_db_test -f "$file"
+          done
 
-      # 8️⃣ Run pipeline (allowed to fail partially)
-      - name: Run ETL pipeline
+      # 8️⃣ Run pipeline (YOUR scripts)
+      - name: Run data pipeline
         run: |
-          python scripts/pipeline_orchestrator.py || true
+          python scripts/ingestion/load_data.py || true
+          python scripts/transformation/generate_analytics.py || true
+          python scripts/validation/validation_checks.py || true
 
-      # 9️⃣ Run tests (NO coverage enforcement)
+      # 9️⃣ Run tests
       - name: Run tests
         run: |
           pytest tests/ -v || true
